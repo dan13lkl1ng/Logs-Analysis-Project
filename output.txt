@@ -1,0 +1,34 @@
+The most popular three articles of all time: 
+
++---------------------------------------------------------+
+: ARTICLE                                   |   VIEWS     :
++---------------------------------------------------------+
+: Candidate is jerk, alleges rival          |   338647    :
+: Bears love berries, alleges bear          |   253801    :
+: Bad things gone, say good people          |   170098    :
+: Goats eat Google's lawn                   |   84906     :
+: Trouble for troubled troublemakers        |   84810     :
+: Balloon goons doomed                      |   84557     :
+: There are a lot of bears                  |   84504     :
+: Media obsessed with bears                 |   84383     :
++---------------------------------------------------------+
+	
+The most popular article authors of all time: 
+
++---------------------------------------------------------+
+: AUTHOR                                    |   VIEWS     :
++---------------------------------------------------------+
+: Ursula La Multa                           |   507594    :
+: Rudolf von Treppenwitz                    |   423457    :
+: Anonymous Contributor                     |   170098    :
+: Markoff Chaney                            |   84557     :
++---------------------------------------------------------+
+	
+
+Days with more than 1% of requests leading to errors: 
+
++------------------------------------------+
+: DAY                        |  PERCENTAGE :
++------------------------------------------+
+| 17                         | 0.0226      :
++------------------------------------------+

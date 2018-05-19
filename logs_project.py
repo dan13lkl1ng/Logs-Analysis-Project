@@ -63,7 +63,7 @@ print(": DAY                        |  PERCENTAGE :")
 print("+------------------------------------------+")
 
 for row in q3:
-    print('| {0:2d}                         | {1:.4f}      :'.format(int(
+    print(': {0:2d}                         | {1:.4f}      :'.format(int(
           row[0]), row[3]))
 
 print("+------------------------------------------+")
