@@ -1,71 +1,149 @@
 #!/usr/bin/env python3
 import psycopg2 as pg
 
-db = pg.connect("dbname=news")
-c = db.cursor()
 
-c.execute("select c.title as Title, b.num as Number from ( select l.path, "
-          "count(*) as num from (select path from log where path like '/articl"
-          "e/%') "
-          "as l,"
-          "(select distinct slug from articles) as a where l.path like "
-          "concat('%',a.slug,'%') group by l.path order by num desc) as b, (se"
-          "lect s"
-          "lug,"
-          "title from articles) as c where b.path like concat('/article/',"
-          "c.slug);")
+def db_connect():
+    """
+    Creates and returns a connection to the database defined by DBNAME,
+    as well as a cursor for the database.
+    Returns:
+        db, c - a tuple. The first element is a connection to the database.
+                The second element is a cursor for the database.
+    """
+    db = pg.connect("dbname=news")
+    c = db.cursor()
 
-query = c.fetchall()
+    return (db, c)
 
-print("The most popular three articles of all time: \n")
-print("+---------------------------------------------------------+")
-print(": ARTICLE                                   |   VIEWS     :")
-print("+---------------------------------------------------------+")
-for row in query:
-    print(":", row[0], " "*(40-len(row[0])), "|  ", row[1], " "*(8 -
-          len(str(row[1]))), ':')
 
-print("+---------------------------------------------------------+")
-print("\t")
+def execute_query(query):
+    """
+    Takes an SQL query as a parameter.
+    Executes the query and returns the results as a list of tuples.
+    args:
+    query - an SQL query statement to be executed.
 
-c.execute("select count(*) as enum, n.name from (select b.name, a.author, a.sl"
-          "ug, a.title from articles as a, authors as b where b.id = a.author)"
-          "as n, (select path from log where path like '/article/%') as l wher"
-          "e l.path = concat('/article/', n.slug) group by n.name order by enu"
-          "m desc limit 4;")
-q2 = c.fetchall()
+    returns:
+    A list of tuples containing the results of the query.
+    """
+    d = db_connect()
+    d[1].execute(query)
+    results = d[1].fetchall()
+    d[0].close()
+    return results
 
-print("The most popular article authors of all time: \n")
-print("+---------------------------------------------------------+")
-print(": AUTHOR                                    |   VIEWS     :")
-print("+---------------------------------------------------------+")
 
-for row in q2:
-    print(":", row[1], " "*(40-len(row[1])), "|  ", row[0], " "*(8 -
-          len(str(row[0]))), ':')
+def print_top_authors():
+    """Prints a list of authors ranked by article views."""
+    query = """
+        SELECT count(*) AS enum, n.name
+        FROM (
+            SELECT b.name, a.author, a.slug, a.title
+            FROM articles AS a, authors AS b
+            WHERE b.id = a.author) AS n,
+            (
+            SELECT path
+            FROM log
+            WHERE path LIKE '/article/%') AS l
+            WHERE l.path = concat('/article/', n.slug)
+            GROUP BY n.name
+            ORDER BY enum DESC
+        LIMIT 4;
+    """
+    results = execute_query(query)
 
-print("+---------------------------------------------------------+")
-print("\t")
+    print("The most popular article authors of all time: \n")
+    print("+---------------------------------------------------------+")
+    print(": AUTHOR                                    |   VIEWS     :")
+    print("+---------------------------------------------------------+")
 
-c.execute("select * from (select day, total, sum_error, sum_error::decimal"
-          "/ total::decimal as percent from (select count(status) as total , d"
-          "ate_part('day', time) as day from log group by date_part('day',time"
-          ")) as a, (select count(status) as sum_error, date_part('day', time)"
-          "as day2 from log where status ='404 NOT FOUND' group by date_part('"
-          "day',time)) as b where a.day = b.day2) c where c.percent >0.01;")
+    for row in results:
+        print(":", row[1], " "*(40-len(row[1])), "|  ", row[0], " "*(8 -
+              len(str(row[0]))), ':')
 
-q3 = c.fetchall()
+    print("+---------------------------------------------------------+")
+    print("\t")
 
-print("\nDays with more than 1% of requests leading to errors: \n")
 
-print("+------------------------------------------+")
-print(": DAY                        |  PERCENTAGE :")
-print("+------------------------------------------+")
+def print_top_articles():
+    """Prints out the top 3 articles of all time."""
+    query = """
+    SELECT c.title AS Title, b.num as Number
+    FROM (
+        SELECT l.path, count(*) AS num
+        FROM (
+            SELECT path
+            FROM log
+            WHERE path LIKE '/article/%') as l,
+            (
+            SELECT DISTINCT slug
+            FROM articles) AS a
+            WHERE l.path LIKE concat('%',a.slug,'%')
+            GROUP BY l.path
+            ORDER BY num DESC) AS b,
+        (
+        SELECT slug, title
+        FROM articles) AS c
+        WHERE b.path LIKE concat('/article/', c.slug
+        )
+    LIMIT 3;
+    """
 
-for row in q3:
-    print(': {0:2d}                         | {1:.4f}      :'.format(int(
-          row[0]), row[3]))
+    results = execute_query(query)
 
-print("+------------------------------------------+")
+    print("The most popular three articles of all time: \n")
+    print("+---------------------------------------------------------+")
+    print(": ARTICLE                                   |   VIEWS     :")
+    print("+---------------------------------------------------------+")
+    for row in results:
+        print(":", row[0], " "*(40-len(row[0])), "|  ", row[1], " "*(8 -
+              len(str(row[1]))), ':')
 
-db.close
+    print("+---------------------------------------------------------+")
+    print("\t")
+
+
+def print_errors_over_one():
+    """
+    Prints out the days where more than 1% of logged access requests were
+    errors.
+    """
+
+    query = """
+            SELECT a.day as day, (sum_error::decimal / total::decimal) AS error
+            FROM (
+                SELECT count(*) AS total, time::date AS day
+                FROM log
+                GROUP BY day) AS a,
+                (
+                SELECT count(*) AS sum_error, time::date AS day
+                FROM log
+                WHERE status='404 NOT FOUND'
+                GROUP BY day) AS b
+            WHERE a.day = b.day
+            AND (sum_error::decimal / total::decimal) > 0.01;
+            """
+
+    results = execute_query(query)
+    print("\nDays with more than 1% of requests leading to errors: \n")
+
+    print("+------------------------------------------+")
+    print(": DAY                        |  PERCENTAGE :")
+    print("+------------------------------------------+")
+
+    for row in results:
+        print(': {0:}                 |  {1:.2f}%      :'.format(row[0],
+              row[1]*100))
+
+    print("+------------------------------------------+")
+
+
+"""
+Code in this section only runs when program is executed
+directly.
+"""
+if __name__ == '__main__':
+    db_connect()
+    print_top_articles()
+    print_top_authors()
+    print_errors_over_one()
