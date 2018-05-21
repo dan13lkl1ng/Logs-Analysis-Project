@@ -68,25 +68,12 @@ def print_top_authors():
 def print_top_articles():
     """Prints out the top 3 articles of all time."""
     query = """
-    SELECT c.title AS Title, b.num as Number
-    FROM (
-        SELECT l.path, count(*) AS num
-        FROM (
-            SELECT path
-            FROM log
-            WHERE path LIKE '/article/%') as l,
-            (
-            SELECT DISTINCT slug
-            FROM articles) AS a
-            WHERE l.path LIKE concat('%',a.slug,'%')
-            GROUP BY l.path
-            ORDER BY num DESC) AS b,
-        (
-        SELECT slug, title
-        FROM articles) AS c
-        WHERE b.path LIKE concat('/article/', c.slug
-        )
-    LIMIT 3;
+            SELECT articles.title, COUNT(log.path) number_views
+            FROM articles INNER JOIN log
+            ON slug = replace(path, '/article/', '')
+            WHERE log.status = '200 OK'
+            GROUP BY articles.title
+            ORDER BY number_views DESC LIMIT 3;
     """
 
     results = execute_query(query)
